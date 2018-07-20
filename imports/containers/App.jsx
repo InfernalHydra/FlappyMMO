@@ -5,6 +5,6 @@ export default class App extends Component
 {
   render()
   {
-    return <Game width={400} height={490}/>;
+    return <Game width={400} height={800}/>;
   }
 }
