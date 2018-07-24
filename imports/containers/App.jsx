@@ -1,10 +1,10 @@
 import React, {Component} from 'react';
-import Game from "../components/Game.jsx";
+import PhaserGame from "../components/PhaserGame.jsx";
 
 export default class App extends Component
 {
   render()
   {
-    return <Game width={400} height={800}/>;
+    return <PhaserGame width={400} height={490}/>;
   }
 }
