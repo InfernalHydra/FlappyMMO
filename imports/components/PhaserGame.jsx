@@ -18,7 +18,7 @@ export default class PhaserGame extends Component
       physics: {
         default: 'arcade',
         arcade: {
-          gravity: {y: 200}
+          gravity: {y: 500}
         }
       },
       backgroundColor: '#71c5cf',
@@ -43,6 +43,7 @@ class Game extends Phaser.Scene
   {
     var player;
     var pipes;
+    var score, scoreLabel;
     super({key : 'game'});
   }
   preload()
@@ -52,8 +53,11 @@ class Game extends Phaser.Scene
   }
   create()
   {
+    this.score = 0;
+    this.scoreLabel = this.add.text(20, 20, "0", {fontSize: '32px', fill: '#000'});
     this.player = this.physics.add.sprite(100, 150, 'bird');
     this.pipes = this.add.group();
+    this.physics.add.collider(this.player, this.pipes, this.restartGame, null, this);
     this.timedEvent = this.time.addEvent({
       delay: 1500,
       callback: this.addPipe,
@@ -72,15 +76,19 @@ class Game extends Phaser.Scene
     }
     if(this.player.y < 0 || this.player.y > 490)
     {
-      this.scene.restart();
+      this.restartGame();
     }
+  }
+  restartGame()
+  {
+    this.scene.restart();
   }
   addPipeBlock(x, y)
   {
     var pipe = this.physics.add.image(x, y, 'pipe');
     //pipe.setActive();
     pipe.setVelocityX(-200);
-    pipe.setGravity(0, -200);
+    pipe.setGravity(0, -500);
     //console.log(pipe);
     pipe.checkWorldBounds = true;
     pipe.outOfBoundsKill = true;
@@ -97,5 +105,7 @@ class Game extends Phaser.Scene
         this.addPipeBlock(400, i * 60 + 10);
       }
     }
+    this.score += 1;
+    this.scoreLabel.setText('' + this.score);
   }
 }
