@@ -1,7 +1,10 @@
 import React, {Component} from 'react';
 import Phaser from 'phaser';
+import {Scores} from '../api/Scores.js';
+import {withTracker} from 'meteor/react-meteor-data';
+import {Meteor} from 'meteor/meteor';
 
-export default class PhaserGame extends Component
+class PhaserGame extends Component
 {
   constructor(props)
   {
@@ -14,7 +17,7 @@ export default class PhaserGame extends Component
       type: Phaser.AUTO,
       width: width,
       height: height,
-      scene: [Game],
+      scene: [new Game(width, height)],
       physics: {
         default: 'arcade',
         arcade: {
@@ -25,7 +28,6 @@ export default class PhaserGame extends Component
     };
     var game = new Phaser.Game(config);
   }
-
   componentDidMount()
   {
     this.createGame(this.props.width, this.props.height);
@@ -37,14 +39,30 @@ export default class PhaserGame extends Component
   }
 }
 
+export default withTracker(() => {
+  const subscription = Meteor.subscribe('scores');
+  var ID = Meteor.userId();
+  return {
+    isReady: subscription.ready(),
+    scores: subscription.ready() && Scores.find({}).fetch(),
+    local: subscription.ready() && Scores.find({userID: ID}).fetch(),
+    global: subscription.ready() && Scores.find().fetch()[0].score
+  };
+})(PhaserGame);
+
 class Game extends Phaser.Scene
 {
-  constructor()
+  constructor(width, height)
   {
+    super({key : 'game'});
     var player;
     var pipes;
-    var score, scoreLabel;
-    super({key : 'game'});
+    var score, scoreLabel
+
+    var width, height, gravity;
+    this.width = width;
+    this.height = height;
+    this.gravity = gravity;
   }
   preload()
   {
@@ -74,13 +92,15 @@ class Game extends Phaser.Scene
       //console.log("space bar down");
       this.player.setVelocityY(-160);
     }
-    if(this.player.y < 0 || this.player.y > 490)
+    if(this.player.y < 0 || this.player.y > this.height)
     {
       this.restartGame();
     }
+    //console.log(this.height);
   }
   restartGame()
   {
+    Meteor.call('scores.updateOrInsert', Meteor.userId(), this.score);
     this.scene.restart();
   }
   addPipeBlock(x, y)
@@ -102,7 +122,7 @@ class Game extends Phaser.Scene
     {
       if(i != hole && i != (hole+1))
       {
-        this.addPipeBlock(400, i * 60 + 10);
+        this.addPipeBlock(this.width, i * 60 + 10);
       }
     }
     this.score += 1;
