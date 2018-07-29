@@ -28,6 +28,7 @@ Meteor.methods({
       var currHighScore = Scores.find({userID}).fetch()[0].score;
       if(score > currHighScore)
       {
+          //console.log("Score: " + score + " currHighScore: " + currHighScore);
           Scores.update(entryID, {$set : {score}});
       }
     }

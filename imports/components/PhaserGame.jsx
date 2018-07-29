@@ -73,15 +73,19 @@ class Game extends Phaser.Scene
   {
     this.score = 0;
     this.scoreLabel = this.add.text(20, 20, "0", {fontSize: '32px', fill: '#000'});
+
     this.player = this.physics.add.sprite(100, 150, 'bird');
+
     this.pipes = this.add.group();
-    this.physics.add.collider(this.player, this.pipes, this.restartGame, null, this);
+    this.physics.add.collider(this.player, this.pipes, this.onDeath, null, this);
     this.timedEvent = this.time.addEvent({
       delay: 1500,
       callback: this.addPipe,
       callbackScope: this,
       loop: true
     });
+
+
     //this.add.image(100, 150, 'pipe');
   }
   update()
@@ -89,31 +93,53 @@ class Game extends Phaser.Scene
     var spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     if(this.input.keyboard.checkDown(spaceBar, 10000))
     {
-      //console.log("space bar down");
-      this.player.setVelocityY(-160);
+      this.jump();
+    }
+    if(this.player.angle < 20)
+    {
+      this.player.angle += 1;
     }
     if(this.player.y < 0 || this.player.y > this.height)
     {
-      this.restartGame();
+      this.onDeath();
     }
     //console.log(this.height);
   }
-  restartGame()
+  jump()
   {
+    if(this.player.alive === false) {return;}
+    //console.log("space bar down");
+    this.player.setVelocityY(-160);
+    //this.add.tween(this.player).to({angle: -20}, 100).start();
+    this.tweens.add({
+      targets: this.player,
+      duration: 100,
+      angle: -20
+    });
+  }
+  onDeath()
+  {
+    if(this.player.alive === false) {return;}
     Meteor.call('scores.updateOrInsert', Meteor.userId(), this.score);
-    this.scene.restart();
+    this.player.alive = false;
+    this.time.removeAllEvents();
+    this.pipes.getChildren().forEach((block) =>{
+      block.setVelocityX(0);
+    });
+
+    //this.scene.restart();
   }
   addPipeBlock(x, y)
   {
     var pipe = this.physics.add.image(x, y, 'pipe');
     //pipe.setActive();
     pipe.setVelocityX(-200);
-    pipe.setGravity(0, -500);
     //console.log(pipe);
     pipe.checkWorldBounds = true;
     pipe.outOfBoundsKill = true;
-
+    pipe.body.allowGravity = false;
     this.pipes.add(pipe);
+    
   }
   addPipe()
   {
