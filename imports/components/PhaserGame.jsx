@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import {Scores} from '../api/Scores.js';
 import {withTracker} from 'meteor/react-meteor-data';
 import {Meteor} from 'meteor/meteor';
+import {Session} from 'meteor/session';
 
 class PhaserGame extends Component
 {
@@ -17,7 +18,7 @@ class PhaserGame extends Component
       type: Phaser.AUTO,
       width: width,
       height: height,
-      scene: [new Game(width, height)],
+      scene: [new StartMenu(width, height), new Game(width, height)],
       physics: {
         default: 'arcade',
         arcade: {
@@ -31,6 +32,7 @@ class PhaserGame extends Component
   componentDidMount()
   {
     this.createGame(this.props.width, this.props.height);
+    Session.set('soundEffectToggle', true);
   }
 
   render()
@@ -46,7 +48,7 @@ export default withTracker(() => {
     isReady: subscription.ready(),
     scores: subscription.ready() && Scores.find({}).fetch(),
     local: subscription.ready() && Scores.find({userID: ID}).fetch(),
-    global: subscription.ready() && Scores.find().fetch()[0].score
+    global: subscription.ready() && Scores.find().fetch()[0]
   };
 })(PhaserGame);
 
@@ -59,25 +61,25 @@ class Game extends Phaser.Scene
     var pipes;
     var score, scoreLabel
 
-    var width, height, gravity;
+    var width, height;
     this.width = width;
     this.height = height;
-    this.gravity = gravity;
   }
   preload()
   {
     this.load.image('bird', '/bird.png');
     this.load.image('pipe', '/pipe.png');
+    this.load.audio('jump', '/jump.wav');
   }
   create()
   {
     this.score = 0;
     this.scoreLabel = this.add.text(20, 20, "0", {fontSize: '32px', fill: '#000'});
 
-    this.player = this.physics.add.sprite(100, 150, 'bird');
+    this.player = this.physics.add.sprite(this.width/4, this.height/2, 'bird');
 
     this.pipes = this.add.group();
-    this.physics.add.collider(this.player, this.pipes, this.onDeath, null, this);
+    this.physics.add.overlap(this.player, this.pipes, this.onDeath, null, this);
     this.timedEvent = this.time.addEvent({
       delay: 1500,
       callback: this.addPipe,
@@ -103,23 +105,24 @@ class Game extends Phaser.Scene
     {
       this.onDeath();
     }
-    //console.log(this.height);
   }
   jump()
   {
     if(this.player.alive === false) {return;}
     //console.log("space bar down");
-    this.player.setVelocityY(-160);
+    this.player.setVelocityY(-250);
     //this.add.tween(this.player).to({angle: -20}, 100).start();
     this.tweens.add({
       targets: this.player,
       duration: 100,
       angle: -20
     });
+    if(Session.get('soundEffectToggle'))
+    this.sound.play('jump');
   }
   onDeath()
   {
-    if(this.player.alive === false) {return;}
+    if(this.player.alive == false) {return;}
     Meteor.call('scores.updateOrInsert', Meteor.userId(), this.score);
     this.player.alive = false;
     this.time.removeAllEvents();
@@ -139,12 +142,12 @@ class Game extends Phaser.Scene
     pipe.outOfBoundsKill = true;
     pipe.body.allowGravity = false;
     this.pipes.add(pipe);
-    
+
   }
   addPipe()
   {
     let hole = Math.floor(Math.random() *  5) + 1;
-    for(let i = 0; i < 9 ; i++)
+    for(let i = 0; i < this.height/55; i++)
     {
       if(i != hole && i != (hole+1))
       {
@@ -153,5 +156,49 @@ class Game extends Phaser.Scene
     }
     this.score += 1;
     this.scoreLabel.setText('' + this.score);
+  }
+}
+class StartMenu extends Phaser.Scene
+{
+  constructor(width, height)
+  {
+    super({key : 'startMenu'});
+    var title, playButton, soundEffectToggle;
+
+    var width, height;
+    this.width = width;
+    this.height = height;
+  }
+  preload()
+  {
+
+  }
+  create()
+  {
+    this.title = this.add.text(this.width/2, this.height/8, "Flappy Bird Thingy", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+
+    this.playButton = this.add.text(this.width/2, this.height/4, "Start", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    this.playButton.setInteractive();
+    this.playButton.on('pointerover', () => {this.playButton.setStyle({fontSize: '32px', fill: '#F00'})});
+    this.playButton.on('pointerout', () => {this.playButton.setStyle({fontSize: '32px', fill: '#000'})});
+    this.playButton.on('pointerup', () => {this.scene.start('game')});
+
+
+    this.soundEffectToggle = this.add.text(this.width/2, this.height * (3/8), "", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    var text = Session.get('soundEffectToggle') ? "Sound Effects: On" : "Sound Effects: Off";
+    this.soundEffectToggle.setText(text);
+
+    this.soundEffectToggle.setInteractive();
+    this.soundEffectToggle.on('pointerover', () => {this.soundEffectToggle.setStyle({fontSize: '32px', fill: '#F00'})});
+    this.soundEffectToggle.on('pointerout', () => {this.soundEffectToggle.setStyle({fontSize: '32px', fill: '#000'})});
+    this.soundEffectToggle.on('pointerup', () => {
+      Session.set('soundEffectToggle', !Session.get('soundEffectToggle'))
+      this.soundEffectToggle.setText(Session.get('soundEffectToggle') ? "Sound Effects: On" : "Sound Effects: Off");
+      console.log(Session.get('soundEffectToggle'));
+    });
+  }
+  update()
+  {
+
   }
 }

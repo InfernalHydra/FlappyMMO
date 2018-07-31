@@ -13,6 +13,7 @@
     "core-js": "^2.5.7",
     "phaser": "^3.11.0",
     "react": "^16.4.1",
+    "react-device-detect": "^1.5.8",
     "react-dom": "^16.4.1"
   }
 }

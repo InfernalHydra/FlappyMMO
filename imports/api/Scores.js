@@ -7,6 +7,8 @@ export const Scores = new Mongo.Collection('scores');
 
 if(Scores.find({}).fetch().length === 0)
 {
+  var rand = Random.id();
+  console.log(rand);
   Scores.insert({userID: "foo", score: 0});
 }
 

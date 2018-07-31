@@ -21,3 +21,4 @@ nathantreid:static-assets
 brettle:accounts-anonymous-auto
 random
 react-meteor-data
+session
