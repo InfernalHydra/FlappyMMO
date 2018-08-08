@@ -18,7 +18,7 @@ class PhaserGame extends Component
       type: Phaser.AUTO,
       width: width,
       height: height,
-      scene: [new StartMenu(width, height), new Game(width, height)],
+      scene: [new StartMenu(width, height), new Game(width, height), new Leaderboard(width, height)],
       physics: {
         default: 'arcade',
         arcade: {
@@ -37,6 +37,10 @@ class PhaserGame extends Component
 
   render()
   {
+    Session.set("isReady", this.props.isReady);
+    Session.set('scores', this.props.scores);
+    Session.set("local", this.props.local);
+    Session.set('global', this.props.global);
     return <div id="game"></div>;
   }
 }
@@ -46,8 +50,8 @@ export default withTracker(() => {
   var ID = Meteor.userId();
   return {
     isReady: subscription.ready(),
-    scores: subscription.ready() && Scores.find({}).fetch(),
-    local: subscription.ready() && Scores.find({userID: ID}).fetch(),
+    scores: subscription.ready() && Scores.find({}, {sort: {scores : 1}}).fetch(),
+    local: subscription.ready() && Scores.find({userID: ID}).fetch()[0],
     global: subscription.ready() && Scores.find().fetch()[0]
   };
 })(PhaserGame);
@@ -59,7 +63,8 @@ class Game extends Phaser.Scene
     super({key : 'game'});
     var player;
     var pipes;
-    var score, scoreLabel
+    var score, scoreLabel, deathLabel;
+    var gameOver = false;
 
     var width, height;
     this.width = width;
@@ -73,10 +78,11 @@ class Game extends Phaser.Scene
   }
   create()
   {
-    this.score = 0;
+    this.score = -1;
     this.scoreLabel = this.add.text(20, 20, "0", {fontSize: '32px', fill: '#000'});
 
     this.player = this.physics.add.sprite(this.width/4, this.height/2, 'bird');
+
 
     this.pipes = this.add.group();
     this.physics.add.overlap(this.player, this.pipes, this.onDeath, null, this);
@@ -129,7 +135,7 @@ class Game extends Phaser.Scene
     this.pipes.getChildren().forEach((block) =>{
       block.setVelocityX(0);
     });
-
+    this.gameOver = true;
     //this.scene.restart();
   }
   addPipeBlock(x, y)
@@ -163,11 +169,12 @@ class StartMenu extends Phaser.Scene
   constructor(width, height)
   {
     super({key : 'startMenu'});
-    var title, playButton, soundEffectToggle;
+    var title, playButton, soundEffectToggle, scoreBoardLabel;
 
     var width, height;
     this.width = width;
     this.height = height;
+
   }
   preload()
   {
@@ -196,9 +203,69 @@ class StartMenu extends Phaser.Scene
       this.soundEffectToggle.setText(Session.get('soundEffectToggle') ? "Sound Effects: On" : "Sound Effects: Off");
       console.log(Session.get('soundEffectToggle'));
     });
+
+    this.scoreBoardLabel = this.add.text(this.width/2, this.height/2, "Leaderboard", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    this.scoreBoardLabel.setInteractive();  
+    this.scoreBoardLabel.on('pointerover', () => {this.scoreBoardLabel.setStyle({fontSize: '32px', fill: '#F00'})});
+    this.scoreBoardLabel.on('pointerout', () => {this.scoreBoardLabel.setStyle({fontSize: '32px', fill: '#000'})});
+    this.scoreBoardLabel.on('pointerup', () => {
+      this.scene.start('leaderboard');
+    });
   }
   update()
   {
 
+  }
+}
+class Leaderboard extends Phaser.Scene
+{
+  constructor(width, height)
+  {
+    super({key: 'leaderboard'});
+    var width, height;
+    this.width = width;
+    this.height = height;
+
+    var title, back, local, sortedScores;
+  }
+  preload()
+  {
+
+  }
+  create()
+  {
+    this.sortedScores = Session.get('scores');
+    console.log(this.sortedScores);
+    this.sortedScores.sort((a, b) => {
+      if(a.score > b.score)
+        return -1;
+      if(a.score < b.score)
+        return 1;
+      return 0;
+    });
+    this.title = this.add.text(this.width/2, this.height/16, "Leaderboard", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+
+    this.back = this.add.text(this.width/8, this.height/16, "Back", {fontSize: '20px', fill: '#000', align: 'center'}).setOrigin(.5);
+    this.back.setInteractive();
+    this.back.on('pointerover', () => {this.back.setStyle({fontSize: '20px', fill: '#F00'})});
+    this.back.on('pointerout', () => {this.back.setStyle({fontSize: '20px', fill: '#000'})});
+    this.back.on('pointerup', () => {
+      this.scene.start('startMenu');
+    });
+
+
+    for(let i = 0; i < 10; i++)
+    {
+      if(i === this.sortedScores.length) break;
+      if(this.sortedScores[i].userID === "foo") continue;
+
+      var text = "" + (i+1) + ". " + this.sortedScores[i].score;
+      var correctFill = Meteor.userId() === this.sortedScores[i].userID ? '#F00' : "#000";
+      this.add.text(this.width/2, this.height/16 + (this.height * (3/40 * (i+1))), text, {fontSize: '32px', fill: correctFill, align: 'center'}).setOrigin(.5);
+    }
+  }
+  update()
+  {
+    //console.log(Session.get('local'));
   }
 }
