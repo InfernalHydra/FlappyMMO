@@ -18,7 +18,7 @@ class PhaserGame extends Component
       type: Phaser.AUTO,
       width: width,
       height: height,
-      scene: [new StartMenu(width, height), new Game(width, height), new Leaderboard(width, height)],
+      scene: [new StartMenu(width, height), new Game(width, height), new Leaderboard(width, height), new End(width, height, 0)],
       physics: {
         default: 'arcade',
         arcade: {
@@ -64,7 +64,6 @@ class Game extends Phaser.Scene
     var player;
     var pipes;
     var score, scoreLabel, deathLabel;
-    var gameOver = false;
 
     var width, height;
     this.width = width;
@@ -111,6 +110,10 @@ class Game extends Phaser.Scene
     {
       this.onDeath();
     }
+    if(this.player.alive === false && this.player.y > this.height)
+    {
+      this.scene.start('end', {score : this.score});
+    }
   }
   jump()
   {
@@ -135,8 +138,6 @@ class Game extends Phaser.Scene
     this.pipes.getChildren().forEach((block) =>{
       block.setVelocityX(0);
     });
-    this.gameOver = true;
-    //this.scene.restart();
   }
   addPipeBlock(x, y)
   {
@@ -267,5 +268,52 @@ class Leaderboard extends Phaser.Scene
   update()
   {
     //console.log(Session.get('local'));
+  }
+}
+class End extends Phaser.Scene
+{
+  //TODO: FINISH THE GAME
+  constructor(width, height, score)
+  {
+    super({key : 'end'});
+    var width, height, score;
+    this.width = width;
+    this.height = height;
+    this.score = score;
+
+    var title, replay, menu, scoreLabel;
+  }
+  init(data)
+  {
+    this.score = data.score
+  }
+  preload()
+  {
+
+  }
+  create()
+  {
+    this.title = this.add.text(this.width/2, this.height/8, "GAME OVER", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    this.scoreLabel = this.add.text(this.width/2, this.height * (3/16), "SCORE: " + this.score, {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    
+    this.replay = this.add.text(this.width/4, this.height/4, "REPLAY", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    this.replay.setInteractive();
+    this.replay.on('pointerover', () => {this.replay.setStyle({fontSize: '32px', fill: '#F00'})});
+    this.replay.on('pointerout', () => {this.replay.setStyle({fontSize: '32px', fill: '#000'})});
+    this.replay.on('pointerup', () => {
+      this.scene.start('game');
+    });
+
+    this.menu = this.add.text(this.width * .75, this.height/4, "MENU", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
+    this.menu.setInteractive();
+    this.menu.on('pointerover', () => {this.menu.setStyle({fontSize: '32px', fill: '#F00'})});
+    this.menu.on('pointerout', () => {this.menu.setStyle({fontSize: '32px', fill: '#000'})});
+    this.menu.on('pointerup', () => {
+      this.scene.start('startMenu');
+    });
+  }
+  update()
+  {
+
   }
 }
