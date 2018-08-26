@@ -25,14 +25,18 @@ class PhaserGame extends Component
           gravity: {y: 500}
         }
       },
-      backgroundColor: '#71c5cf',
+      backgroundColor: '#71c5cf'
     };
     var game = new Phaser.Game(config);
+
+    var name = prompt("Please enter your name", "Your Name");
+    console.log(name);
+    Session.set('playerName', name);
   }
   componentDidMount()
   {
     this.createGame(this.props.width, this.props.height);
-    Session.set('soundEffectToggle', true);
+    Session.set('soundEffectToggle', false);
   }
 
   render()
@@ -71,17 +75,30 @@ class Game extends Phaser.Scene
   }
   preload()
   {
-    this.load.image('bird', '/bird.png');
-    this.load.image('pipe', '/pipe.png');
+    //this.load.image('bird', '/bird.png');
+    this.load.spritesheet('bird', '/bird.png', {frameWidth: 54, frameHeight: 42, endFrame : 2});
+    this.load.image('pipe', '/pipebody.png');
+    this.load.image('pipeHead', '/pipehead.png');
     this.load.audio('jump', '/jump.wav');
+
   }
   create()
   {
+
     this.score = -1;
     this.scoreLabel = this.add.text(20, 20, "0", {fontSize: '32px', fill: '#000'});
 
     this.player = this.physics.add.sprite(this.width/4, this.height/2, 'bird');
-
+    
+    var birdAnimation = this.anims.generateFrameNumbers('bird', {start: 0, end: 2});
+    this.anims.create({
+      key: 'fly',
+      frames: birdAnimation,
+      frameRate: 10,
+      repeat: -1  
+    });
+    //console.log(this.anims.get);
+    this.player.anims.play('fly');
 
     this.pipes = this.add.group();
     this.physics.add.overlap(this.player, this.pipes, this.onDeath, null, this);
@@ -102,6 +119,10 @@ class Game extends Phaser.Scene
     {
       this.jump();
     }
+    this.input.on('pointerdown', ()=> {
+      this.jump();
+    }, this);
+
     if(this.player.angle < 20)
     {
       this.player.angle += 1;
@@ -132,16 +153,37 @@ class Game extends Phaser.Scene
   onDeath()
   {
     if(this.player.alive == false) {return;}
-    Meteor.call('scores.updateOrInsert', Meteor.userId(), this.score);
+    var correctScore = this.score < 0 ? 0 : this.score;
+    console.log("ID: " + Meteor.userId() + " SCORE: " + correctScore);
+    Meteor.call('scores.updateOrInsert', Meteor.userId(), correctScore, Session.get('playerName'));
     this.player.alive = false;
     this.time.removeAllEvents();
     this.pipes.getChildren().forEach((block) =>{
       block.setVelocityX(0);
     });
+    this.anims.get('fly').pause();
+    this.anims.remove('fly');
+    //console.log(this.anims.get('fly'));
   }
-  addPipeBlock(x, y)
+  addPipeBlock(x, y, type)
   {
-    var pipe = this.physics.add.image(x, y, 'pipe');
+    var correctImage = 'pipe';
+    if(type === 'body')
+    {
+      correctImage = 'pipe';
+    }
+    else if(type === 'head' || type === 'headInverted')
+    {
+      correctImage = 'pipeHead';
+    }
+
+    var pipe = this.physics.add.image(x, y, correctImage);
+    
+    if(type === 'headInverted')
+    {
+      console.log('asdf');
+      pipe.setRotation(Math.PI);
+    }
     //pipe.setActive();
     pipe.setVelocityX(-200);
     //console.log(pipe);
@@ -154,11 +196,19 @@ class Game extends Phaser.Scene
   addPipe()
   {
     let hole = Math.floor(Math.random() *  5) + 1;
-    for(let i = 0; i < this.height/55; i++)
+    for(let i = 0; i < this.height/40; i++)
     {
-      if(i != hole && i != (hole+1))
+      if(i != hole && i != (hole+1) && i !=(hole+2))
       {
-        this.addPipeBlock(this.width, i * 60 + 10);
+        this.addPipeBlock(this.width, i * 50, 'body');
+      }
+      if(i == (hole - 1))
+      {
+        this.addPipeBlock(this.width, i * 50, 'head');
+      }
+      if(i == (hole + 3))
+      {
+        this.addPipeBlock(this.width, i * 50, 'headInverted');
       }
     }
     this.score += 1;
@@ -170,7 +220,7 @@ class StartMenu extends Phaser.Scene
   constructor(width, height)
   {
     super({key : 'startMenu'});
-    var title, playButton, soundEffectToggle, scoreBoardLabel;
+    var title, playButton, soundEffectToggle, scoreBoardLabel,input;
 
     var width, height;
     this.width = width;
@@ -179,10 +229,10 @@ class StartMenu extends Phaser.Scene
   }
   preload()
   {
-
   }
   create()
   {
+
     this.title = this.add.text(this.width/2, this.height/8, "Flappy Bird Thingy", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
 
     this.playButton = this.add.text(this.width/2, this.height/4, "Start", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
@@ -202,7 +252,7 @@ class StartMenu extends Phaser.Scene
     this.soundEffectToggle.on('pointerup', () => {
       Session.set('soundEffectToggle', !Session.get('soundEffectToggle'))
       this.soundEffectToggle.setText(Session.get('soundEffectToggle') ? "Sound Effects: On" : "Sound Effects: Off");
-      console.log(Session.get('soundEffectToggle'));
+      //console.log(Session.get('soundEffectToggle'));
     });
 
     this.scoreBoardLabel = this.add.text(this.width/2, this.height/2, "Leaderboard", {fontSize: '32px', fill: '#000', align: 'center'}).setOrigin(.5);
@@ -260,7 +310,7 @@ class Leaderboard extends Phaser.Scene
       if(i === this.sortedScores.length) break;
       if(this.sortedScores[i].userID === "foo") continue;
 
-      var text = "" + (i+1) + ". " + this.sortedScores[i].score;
+      var text = "" + (i+1) + ". " + this.sortedScores[i].playerName + " " + this.sortedScores[i].score;
       var correctFill = Meteor.userId() === this.sortedScores[i].userID ? '#F00' : "#000";
       this.add.text(this.width/2, this.height/16 + (this.height * (3/40 * (i+1))), text, {fontSize: '32px', fill: correctFill, align: 'center'}).setOrigin(.5);
     }
@@ -285,7 +335,7 @@ class End extends Phaser.Scene
   }
   init(data)
   {
-    this.score = data.score
+    this.score = data.score < 0 ? 0 : data.score;
   }
   preload()
   {

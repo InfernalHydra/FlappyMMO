@@ -20,7 +20,7 @@ if(Meteor.isServer)
 }
 
 Meteor.methods({
-  'scores.updateOrInsert'(userID, score) {
+  'scores.updateOrInsert'(userID, score, playerName) {
     var exists = Scores.find({userID}).fetch().length === 0 ? false : true;
     //console.log(exists);
     //console.log(Scores.find({userID}));
@@ -36,7 +36,7 @@ Meteor.methods({
     }
     else
     {
-      Scores.insert({userID, score});
+      Scores.insert({userID, score, playerName});
     }
   }
 });

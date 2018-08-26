@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@babel/runtime": "^7.0.0-beta.54",
+    "@orange-games/phaser-input": "^2.0.5",
     "core-js": "^2.5.7",
     "phaser": "^3.11.0",
     "react": "^16.4.1",
