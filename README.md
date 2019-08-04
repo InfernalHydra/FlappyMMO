@@ -6,7 +6,5 @@ This program was built using Meteor, ReactJS, and PhaserJS.
 ```
 meteor
 ```
-## Help Wanted
-Feedback is appreciated.   
-The reasons why the buttons are just text and the sprites are just squares is because I can't draw.  
+
  
